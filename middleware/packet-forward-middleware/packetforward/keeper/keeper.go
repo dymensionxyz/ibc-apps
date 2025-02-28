@@ -176,6 +176,7 @@ func (k *Keeper) WriteAcknowledgementForForwardedPacket(
 	inFlightPacket *types.InFlightPacket,
 	ack channeltypes.Acknowledgement,
 ) error {
+
 	// Lookup module by channel capability
 	_, chanCap, err := k.channelKeeper.LookupModuleByChannel(ctx, inFlightPacket.RefundPortId, inFlightPacket.RefundChannelId)
 	if err != nil {
@@ -186,6 +187,7 @@ func (k *Keeper) WriteAcknowledgementForForwardedPacket(
 	// On an ack error or timeout on a forwarded packet, the funds in the escrow account
 	// should be moved to the other escrow account on the other side or burned.
 	if !ack.Success() {
+		ctx.Logger().Error("ACK SUCC")
 		// If this packet is non-refundable due to some action that took place between the initial ibc transfer and the forward
 		// we write a successful ack containing details on what happened regardless of ack error or timeout
 		if inFlightPacket.Nonrefundable {
@@ -279,6 +281,8 @@ func (k *Keeper) WriteAcknowledgementForForwardedPacket(
 			newTotalEscrow := currentTotalEscrow.Add(token)
 			k.transferKeeper.SetTotalEscrowForDenom(ctx, newTotalEscrow)
 		}
+	} else {
+		ctx.Logger().Error("ACK ERR")
 	}
 
 	return k.ics4Wrapper.WriteAcknowledgement(ctx, chanCap, channeltypes.Packet{
@@ -405,6 +409,15 @@ func (k *Keeper) ForwardTransferPacket(
 		)
 	}()
 	return nil
+}
+
+func (k *Keeper) SetFoo(ctx sdk.Context, channelID, portID string, sequence uint64, x *types.InFlightPacket) {
+	key := types.RefundPacketKey(channelID, portID, sequence)
+	store := ctx.KVStore(k.storeKey)
+	p := types.InFlightPacket{}
+	_ = x
+	bz := k.cdc.MustMarshal(&p)
+	store.Set(key, bz)
 }
 
 // TimeoutShouldRetry returns inFlightPacket and no error if retry should be attempted. Error is returned if IBC refund should occur.

@@ -158,6 +158,10 @@ func newErrorAcknowledgement(err error) channeltypes.Acknowledgement {
 	}
 }
 
+func (im IBCMiddleware) SetFoo(ctx sdk.Context, channelID, portID string, sequence uint64, p *types.InFlightPacket) {
+	im.keeper.SetFoo(ctx, channelID, portID, sequence, p)
+}
+
 // OnRecvPacket checks the memo field on this packet and if the metadata inside's root key indicates this packet
 // should be handled by the swap middleware it attempts to perform a swap. If the swap is successful
 // the underlying application's OnRecvPacket callback is invoked, an ack error is returned otherwise.

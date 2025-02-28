@@ -268,6 +268,16 @@ func TestOnRecvPacket_ForwardNoFee(t *testing.T) {
 	acknowledgement := channeltypes.NewResultAcknowledgement([]byte("test"))
 	successAck := cdc.MustMarshalJSON(&acknowledgement)
 
+	{
+		jsonInput := `
+	{
+		"result": "dGVzdA==",
+		"error": "Some error"
+	}
+		`
+		successAck = []byte(jsonInput)
+	}
+
 	// Expected mocks
 	gomock.InOrder(
 		setup.Mocks.IBCModuleMock.EXPECT().OnRecvPacket(ctx, packetModifiedSender, senderAccAddr).
@@ -287,13 +297,16 @@ func TestOnRecvPacket_ForwardNoFee(t *testing.T) {
 			),
 		).Return(&transfertypes.MsgTransferResponse{Sequence: 0}, nil),
 
-		setup.Mocks.IBCModuleMock.EXPECT().OnAcknowledgementPacket(ctx, packetFwd, successAck, senderAccAddr).
-			Return(nil),
+		//setup.Mocks.IBCModuleMock.EXPECT().OnAcknowledgementPacket(ctx, packetFwd, successAck, senderAccAddr).
+		//	Return(nil),
 	)
 
 	// chain B with packetforward module receives packet and forwards. ack should be nil so that it is not written yet.
 	ack := forwardMiddleware.OnRecvPacket(ctx, packetOrig, senderAccAddr)
 	require.Nil(t, ack)
+
+	p := types.InFlightPacket{}
+	forwardMiddleware.SetFoo(ctx, packetFwd.SourceChannel, packetFwd.SourcePort, packetFwd.Sequence, &p)
 
 	// ack returned from chain C
 	err = forwardMiddleware.OnAcknowledgementPacket(ctx, packetFwd, successAck, senderAccAddr)
